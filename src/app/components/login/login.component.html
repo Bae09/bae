@@ -1,4 +1,5 @@
-<div class="section section-image section-login" style="background-image: url('assets/img/login-image.jpg');">
+<div class="wrapper">
+  <div class="page-header" style="background-image: url('./assets/img/login-image.jpg');">
     <div class="container">
         <div class="row">
             <div class="col-lg-4 col-md-6 col-sm-12 ml-auto mr-auto">
@@ -15,28 +16,29 @@
                             <i class="fa fa-twitter"></i>
                         </a>
                     </div>
-                    <form class="register-form">
+                    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
                         <label>Email</label>
-                        <div class="input-group form-group-no-border" [ngClass]="{'input-group-focus':focus===true}">
+                        <div class="input-group form-group-no-border">
                           <div class="input-group-prepend">
                             <span class="input-group-text">
                                 <i class="nc-icon nc-email-85"></i>
                             </span>
                           </div>
-
-                            <input type="text" class="form-control" placeholder="Email" (focus)="focus=true" (blur)="focus=false" >
+                            <input type="text" class="form-control" placeholder="id" formControlName="id" (focus)="focus=true" (blur)="focus=false" required>
                         </div>
 
                         <label>Password</label>
-                        <div class="input-group form-group-no-border" [ngClass]="{'input-group-focus':focus1===true}">
+                        <div class="input-group form-group-no-border">
                           <div class="input-group-prepend">
                             <span class="input-group-text">
                                 <i class="nc-icon nc-key-25"></i>
                             </span>
                           </div>
-                            <input type="text" class="form-control" placeholder="Password" (focus)="focus1=true" (blur)="focus1=false" >
+
+                            <input type="text" class="form-control" placeholder="Password" placeholder="Enter your password" type="password" formControlName="password" (focus)="focus1=true" (blur)="focus1=false" required>
+
                         </div>
-                        <button class="btn btn-danger btn-block btn-round">Register</button>
+                        <button class="btn btn-danger btn-block btn-round" type="submit">Login</button>
                     </form>
                     <div class="forgot">
                         <a href="#" class="btn btn-link btn-danger">Forgot password?</a>
@@ -48,4 +50,5 @@
             </div>
         </div>
     </div>
+  </div>
 </div>

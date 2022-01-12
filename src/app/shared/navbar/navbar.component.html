@@ -13,6 +13,9 @@
                 <li class="nav-item" *ngIf="isHome()">
                     <a [routerLink]="['/login']" class="btn btn-danger btn-round">Sign In</a>
                 </li>
+                <li class="nav-item" *ngIf="isHome()">
+                    <a [routerLink]="['/signup']" class="btn btn-danger btn-round">Sign Up</a>
+                </li>
                 <!-- <li class="nav-item" *ngIf="isHome()">
                     <a [routerLink]="['/home']" *ngIf="!isDocumentation()" class="nav-link"><i class="nc-icon nc-layout-11"></i>Components</a>
                     <a [routerLink]="['/home']" *ngIf="isDocumentation()" class="nav-link">Back to Kit</a>
