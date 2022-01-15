@@ -1,5 +1,6 @@
 import { Component, OnInit, Renderer2 } from '@angular/core';
 import { NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
+import { DatastreamService } from '../service/datastream.service';
 
 @Component({
     selector: 'app-components',
@@ -12,6 +13,7 @@ import { NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 })
 
 export class ComponentsComponent implements OnInit {
+    userLogined:any;
     page = 4;
     page1 = 5;
     focus;
@@ -19,7 +21,7 @@ export class ComponentsComponent implements OnInit {
     focus2;
     date: {year: number, month: number};
     model: NgbDateStruct;
-    constructor( private renderer : Renderer2) {}
+    constructor( private renderer : Renderer2, private datastreamService: DatastreamService) {}
     isWeekend(date: NgbDateStruct) {
         const d = new Date(date.year, date.month - 1, date.day);
         return d.getDay() === 0 || d.getDay() === 6;
@@ -40,6 +42,8 @@ export class ComponentsComponent implements OnInit {
                 input_group[i].classList.remove('input-group-focus');
             });
         }
+        this.userLogined = this.datastreamService.userLogined;
     }
+
 
 }

@@ -1,5 +1,8 @@
 import { Component, OnInit, ElementRef } from '@angular/core';
 import { Location, LocationStrategy, PathLocationStrategy } from '@angular/common';
+import { DatastreamService } from '../../service/datastream.service';
+import { Data } from '../../interface/data';
+import {NgbModal, NgbActiveModal} from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
     selector: 'app-navbar',
@@ -9,9 +12,12 @@ import { Location, LocationStrategy, PathLocationStrategy } from '@angular/commo
 export class NavbarComponent implements OnInit {
     private toggleButton: any;
     private sidebarVisible: boolean;
+    private userdata: any;
+    private userHere:boolean;
 
-    constructor(public location: Location, private element : ElementRef) {
+    constructor(public location: Location, private element : ElementRef, private datastreamservice: DatastreamService) {
         this.sidebarVisible = false;
+        this.userdata = this.datastreamservice.getDataStream();
     }
 
     ngOnInit() {
@@ -47,6 +53,26 @@ export class NavbarComponent implements OnInit {
             this.sidebarClose();
         }
     };
+
+    open() {
+
+    }
+
+    isuserSigniedUp(){
+      var titlee = this.location.prepareExternalUrl(this.location.path());
+      this.userdata = this.datastreamservice.getDataStream();
+      if(titlee.charAt(0) === '#'){
+          titlee = titlee.slice( 1 );
+      }
+      console.log(this.userdata.isLogged )
+      console.log(this.userdata.isLogged && (titlee === '/home' || titlee === '/host'))
+      if (this.userdata.isLogged ){
+        return true;
+      }else{
+        return false;
+      }
+    };
+
     isHome() {
       var titlee = this.location.prepareExternalUrl(this.location.path());
       if(titlee.charAt(0) === '#'){
