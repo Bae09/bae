@@ -1,0 +1,881 @@
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
+import { Observable, Subject, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { endpoint, idxPath, staPath, switchPath } from '../environments/environment';
+import { APIPath } from './api-path/api-enum';
+import { StatsResponse, ChartDataSource } from './dashboard-graphs/graphs.model';
+import { DetailErrorModule } from './detail-error.module';
+import { ErrorMessageModule } from './error-message.module';
+import {
+  ANDOREnum, InqObjModule, InqReqObjectModule, ReqObjectModule,
+  SearchQuery, TSearchGroup, TSearchParam, TSearchSubGroup, TSortCard
+} from './req-object.module';
+import { ResObjectModule } from './res-object.module';
+import { TAmount } from './setting/setting.model';
+import { ErrorDialogComponent } from './shared/error-dialog/error-dialog.component';
+import { SuccessBarComponent } from './shared/success-bar/success-bar.component';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class PostService {
+
+  // localNotifs = [];
+  localNotifs: Array<NotifObj> = new Array<NotifObj>();
+  private message: any = new Subject();
+
+  constructor(private http: HttpClient, public snackBar: MatSnackBar,
+    public dialog: MatDialog, private router: Router) { }
+
+  public doPostGetAll(messageId: APIPath, search: string, searchField: string,
+    pageNumber: number, pageSize: number) {
+    let searchQuery: SearchQuery = null;
+    if (search.length > 0) {
+      searchQuery = this.createSearchQuery(search, searchField);
+    }
+    return this.doPostGetAllWithSearch(messageId, searchQuery, pageNumber, pageSize);
+  }
+
+  public doPostGetAll2(messageId: APIPath, search: string, searchField: string,
+    pageNumber: number, pageSize: number, sort: TSortCard) {
+    let searchQuery: SearchQuery = null;
+    if (search.length > 0) {
+      searchQuery = this.createSearchQuery(search, searchField);
+    }
+    return this.doPostGetAllWithSearch2(messageId, searchQuery, pageNumber, pageSize, sort);
+  }
+
+  public doPostGetAllbyTwo(messageId: APIPath, searchValue: string, searchField: string,
+    searchValue2: string, searchField2: string,
+    pageNumber: number, pageSize: number, isAnd: boolean) {
+
+    let searchQuery: SearchQuery = null;
+    if (searchValue.length > 0 && searchValue2.length > 0) {
+      searchQuery = this.createSearchQuerybyTwo(searchValue, searchField, searchValue2, searchField2, isAnd);
+    }
+    return this.doPostGetAllWithSearch(messageId, searchQuery, pageNumber, pageSize);
+  }
+
+  // newly added for boolean
+
+  public doPostGetAllbytwoTrue(messageId: APIPath, searchValue: string, searchField: string,
+    searchValue2: boolean, searchField2: string,
+    pageNumber: number, pageSize: number, isAnd: boolean) {
+
+    let searchQuery: SearchQuery = null;
+    if (searchValue.length > 0) {
+      searchQuery = this.createSearchQuerybytwoTrue(searchValue, searchField, searchValue2, searchField2, isAnd);
+    }
+    return this.doPostGetAllWithSearch(messageId, searchQuery, pageNumber, pageSize);
+  }
+
+  public doPostGetAllbyThree(messageId: APIPath, searchValue: string, searchField: string,
+    searchValue2: string, searchField2: string,
+    searchValue3: string, searchField3: string,
+    pageNumber: number, pageSize: number, isAnd: boolean) {
+
+    let searchQuery: SearchQuery = null;
+    if (searchValue.length > 0 && searchValue2.length > 0 && searchValue3.length > 0) {
+      searchQuery = this.createSearchQuerybyThree(searchValue, searchField, searchValue2, searchField2,
+        searchValue3, searchField3, isAnd);
+    }
+    return this.doPostGetAllWithSearch(messageId, searchQuery, pageNumber, pageSize);
+  }
+
+  // operator changed to EQ
+
+  public doPostGetAllbytwo(messageId: APIPath, searchValue: string, searchField: string,
+    searchValue2: string, searchField2: string,
+    pageNumber: number, pageSize: number, isAnd: boolean) {
+
+    let searchQuery: SearchQuery = null;
+    if (searchValue.length > 0 && searchValue2.length > 0) {
+      searchQuery = this.createSearchQuerybytwo(searchValue, searchField, searchValue2, searchField2, isAnd);
+    }
+    return this.doPostGetAllWithSearch(messageId, searchQuery, pageNumber, pageSize);
+  }
+
+  //  Data Service
+  public doPostGetAllWithSearch(messageId: APIPath, searchQ: SearchQuery,
+    pageNumber: number, pageSize: number) {
+    const reqData = new ReqObjectModule();
+    reqData.messageID = messageId;
+    reqData.requestType = 'LIST';
+    if (searchQ) {
+      reqData.searchQuery = searchQ;
+    }
+    if (pageNumber != null) {
+      reqData.pageNo = pageNumber;
+    } else {
+      reqData.pageNo = 0;
+    }
+
+    if (pageSize != null) {
+      reqData.pageSize = pageSize;
+    } else {
+      reqData.pageSize = localStorage.getItem('DefaultPageSize');
+    }
+    return this.postObservable(reqData);
+  }
+
+  public doPostGetAllWithSearch2(messageId: APIPath, searchQ: SearchQuery,
+    pageNumber: number, pageSize: number, sort: TSortCard) {
+    const reqData = new ReqObjectModule();
+    reqData.messageID = messageId;
+    reqData.requestType = 'LIST';
+    if (searchQ) {
+      reqData.searchQuery = searchQ;
+    }
+    if (pageNumber != null) {
+      reqData.pageNo = pageNumber;
+    } else {
+      reqData.pageNo = 0;
+    }
+
+    if (pageSize != null) {
+      reqData.pageSize = pageSize;
+    } else {
+      reqData.pageSize = localStorage.getItem('DefaultPageSize');
+    }
+    reqData.sort = sort;
+    return this.postObservable(reqData);
+  }
+
+  // Graphs Data Service
+  public doPostGraphsGetAll(object: any) {
+    const reqData = new ReqObjectModule();
+    reqData.messageID = APIPath.APP_STAT_REQ;
+    reqData.requestType = 'LIST';
+    reqData.object = object;
+    return this.postObservable(reqData);
+  }
+
+  public doPost(messageId: APIPath, reqObj: any) {
+    const reqData = new ReqObjectModule();
+    reqData.messageID = messageId;
+    reqData.requestType = '';
+    if (reqObj !== null) {
+      reqData.object = reqObj;
+    }
+    return this.postObservable(reqData);
+  }
+
+  public doPostInq(messageId: APIPath, id: string) {
+    const reqData = new InqReqObjectModule();
+    reqData.messageID = messageId;
+    reqData.requestType = 'QUERY';
+    const reqDataObj = new InqObjModule();
+    reqDataObj.id = id;
+    reqData.object = reqDataObj;
+    return this.postObservable(reqData);
+
+  }
+
+  public doPostDel(messageId: APIPath, id: string) {
+    const reqData = new InqReqObjectModule();
+    reqData.messageID = messageId;
+    reqData.requestType = 'DELETE';
+    const reqDataObj = new InqObjModule();
+    reqDataObj.id = id;
+    reqData.object = reqDataObj;
+    return this.postObservable(reqData);
+  }
+
+  public doPostUpd(messageId: APIPath, updObj: any) {
+    const reqData = new ReqObjectModule();
+    reqData.messageID = messageId;
+    reqData.requestType = 'UPDATE';
+    reqData.object = updObj;
+    return this.postObservable(reqData);
+  }
+
+  public doPostCreate(messageId: APIPath, createObj: any) {
+    const reqData = new ReqObjectModule();
+    reqData.messageID = messageId;
+    reqData.requestType = 'CREATE';
+    reqData.object = createObj;
+    return this.postObservable(reqData);
+  }
+
+  public doPostAprRej(messageId: APIPath, updObj: any) {
+    const reqData = new ReqObjectModule();
+    reqData.messageID = messageId;
+    reqData.requestType = 'APRREJ';
+    reqData.object = updObj;
+    return this.postObservable(reqData);
+  }
+
+  public isAllowed(privId: number) {
+    const priviledge: string = localStorage.getItem('p');
+    return priviledge.charAt(privId - 1) === '1';
+  }
+
+  respDataFormatter(data: ResObjectModule) {
+    if (data.success) {
+      this.setNotif('success', null);
+      return data.object;
+    } else {
+      const errObj = new ErrorMessageModule();
+      errObj.multipleMessage = new Array<DetailErrorModule>();
+      errObj.errorID = '000';
+      if (!data.errors) {
+        data.errors = new Array<string>();
+      }
+      if (data.errors.length > 0) {
+        errObj.errorMessage = data.errors[0];
+      }
+      if (data.detailErrors) {
+
+        if (data.detailErrors.length > 0) {
+          data.detailErrors.forEach(element => {
+            errObj.multipleMessage.push(element);
+          });
+        }
+      }
+      this.setNotif('error', errObj);
+      return errObj;
+    }
+  }
+
+  private postObservable(reqData: any) {
+    const jwtToken = 'Bearer ' + localStorage.getItem('token');
+    const httpOptions = new HttpHeaders({ 'Content-Type': 'application/json; charset=utf-8', Authorization: jwtToken });
+    let apiUrl = endpoint.api_endpoint + reqData.messageID;
+    if (apiUrl.toLowerCase().indexOf('/api/swt/') > 0) {
+      if (switchPath.isactive) {
+        apiUrl = apiUrl.replace(switchPath.pathToReplaceFrom, switchPath.pathToReplaceTo);
+      } else {
+        apiUrl = apiUrl.replace('/api/swt/', '/api/');
+      }
+    }
+    if (apiUrl.toLowerCase().indexOf('/api/idx/') > 0) {
+      if (idxPath.isactive) {
+        apiUrl = apiUrl.replace(idxPath.pathToReplaceFrom, idxPath.pathToReplaceTo);
+      } else {
+        apiUrl = apiUrl.replace('/api/idx/', '/api/');
+      }
+    }
+
+    if (apiUrl.toLowerCase().indexOf('/api/analytics/') > 0) {
+      if (staPath.isactive) {
+        apiUrl = apiUrl.replace(staPath.pathToReplaceFrom, staPath.pathToReplaceTo);
+      } else {
+        apiUrl = apiUrl.replace('/api/analytics/', '/api/stat/');
+      }
+    }
+
+    if (reqData.object) {
+      let obj = this.removeEmptyStringsInBody(reqData.object);
+      reqData.object = obj;
+    }
+    return this.http.post<ResObjectModule>(apiUrl, JSON.stringify(reqData), { headers: httpOptions })
+      .pipe(
+        catchError(err => this.handleError(err))
+      );
+  }
+  public removeEmptyStringsInBody(body: any) {
+    let bodyTemp = JSON.stringify(body, function (key, value) {
+      return value === "" ? null : value
+    });
+    return JSON.parse(bodyTemp);
+  }
+  public postFile(formData: FormData, messageId: APIPath) {
+    const jwtToken = 'Bearer ' + localStorage.getItem('token');
+    const httpOptions = new HttpHeaders({ Authorization: jwtToken });
+    const apiUrl = endpoint.api_endpoint + messageId;
+    const options = { headers: httpOptions };
+    return this.http.post<any>(apiUrl, formData, { headers: httpOptions })
+      .pipe(
+        catchError(err => this.handleError(err))
+      );
+  }
+
+
+  public doGetFile(messageId: any): Observable<HttpResponse<Blob>> {
+    const jwtToken = 'Bearer ' + localStorage.getItem('token');
+    let headers = new HttpHeaders();
+    headers = headers.append('Accept', '*/*');
+    headers = headers.append('Authorization', jwtToken);
+    const apiPath = endpoint.api_endpoint + messageId;
+    return this.http.get(apiPath, {
+      headers,
+      observe: 'response',
+      responseType: 'blob'
+    });
+  }
+
+  private handleError(err: HttpErrorResponse) {
+    let errorCode = '0000';
+    let errorMessageDesc = 'Unknown Error Occured, Contact Administrator';
+    if (err.error instanceof ErrorEvent) {
+      // A client-side or network error occurred. Handle it accordingly.
+      console.error('An error occurred: ErrorEvent - Post Service');
+      errorMessageDesc = err.error.message;
+    } else {
+      // The backend returned an unsuccessful response code.
+      // The response body may contain clues as to what went wrong,
+      // console.error(
+      //   `Backend returned code ${err.status}, ` +
+      //   `body was: ${err.error}`);
+      console.error('An error occurred: Backend Error - Post Service');
+      errorCode = err.status.toString();
+      if (err.error.message) {
+        errorMessageDesc = err.error.message;
+      }
+      if (err.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('p');
+        localStorage.clear();
+        sessionStorage.clear();
+        this.snackBar.open('Unauthorized Access detected. User logged out', '', { duration: 3000 });
+        this.router.navigate(['/']);
+      }
+    }
+    const errorObject: ErrorMessageModule = {
+      errorID: errorCode,
+      errorMessage: errorMessageDesc,
+      multipleMessage: []
+    };
+    return throwError(errorObject);
+  }
+
+  private createSearchQuery(search: string, searchField: string) {
+    const searchQuery = new SearchQuery();
+    const parmValue = new TSearchParam();
+
+    parmValue.field = searchField;
+    parmValue.operator = 'LIKE';
+    parmValue.value = search;
+
+    const subGroup = new TSearchSubGroup();
+    subGroup.criteria1 = ANDOREnum.OR;
+    const parmArray = new Array<TSearchParam>();
+    parmArray.push(parmValue);
+    subGroup.group = parmArray;
+    const group = new TSearchGroup();
+    group.criteria1 = ANDOREnum.OR;
+    const subGroupArray = new Array<TSearchSubGroup>();
+    subGroupArray.push(subGroup);
+    group.group = subGroupArray;
+    searchQuery.group = group;
+    return searchQuery;
+  }
+
+  private createSearchQuerybyTwo(searchValue: string, searchField: string, searchValue2: string, searchField2: string, isAnd: boolean) {
+    const tParamObj1 = new TSearchParam();
+
+    tParamObj1.field = searchField;
+    tParamObj1.operator = 'LIKE';
+    tParamObj1.value = searchValue;
+
+    const tParamObj2 = new TSearchParam();
+    tParamObj2.field = searchField2;
+    tParamObj2.operator = 'LIKE';
+    tParamObj2.value = searchValue2;
+
+    const subGroup = new TSearchSubGroup();
+    const parmArray = new Array<TSearchParam>();
+    parmArray.push(tParamObj1);
+    parmArray.push(tParamObj2);
+    subGroup.group = parmArray;
+    if (isAnd) {
+      subGroup.criteria1 = ANDOREnum.AND;
+    } else {
+      subGroup.criteria1 = ANDOREnum.OR;
+    }
+
+    const searchGroup = new TSearchGroup();
+    const subGroupArray = new Array<TSearchSubGroup>();
+    subGroupArray.push(subGroup);
+    searchGroup.criteria1 = ANDOREnum.AND;
+    searchGroup.group = subGroupArray;
+    const searchQuery = new SearchQuery();
+    searchQuery.group = searchGroup;
+
+    return searchQuery;
+  }
+
+  private createSearchQuerybytwoTrue(searchValue: string, searchField: string, searchValue2: boolean, searchField2: string, isAnd: boolean) {
+    const tParamObj1 = new TSearchParam();
+
+    tParamObj1.field = searchField;
+    tParamObj1.operator = 'LIKE';
+    tParamObj1.value = searchValue;
+
+    const tParamObj2 = new TSearchParam();
+    tParamObj2.field = searchField2;
+    tParamObj2.operator = 'LIKE';
+    tParamObj2.value = searchValue2;
+
+    const subGroup = new TSearchSubGroup();
+    const parmArray = new Array<TSearchParam>();
+    parmArray.push(tParamObj1);
+    parmArray.push(tParamObj2);
+    subGroup.group = parmArray;
+    if (isAnd) {
+      subGroup.criteria1 = ANDOREnum.AND;
+    } else {
+      subGroup.criteria1 = ANDOREnum.OR;
+    }
+
+    const searchGroup = new TSearchGroup();
+    const subGroupArray = new Array<TSearchSubGroup>();
+    subGroupArray.push(subGroup);
+    searchGroup.criteria1 = ANDOREnum.AND;
+    searchGroup.group = subGroupArray;
+    const searchQuery = new SearchQuery();
+    searchQuery.group = searchGroup;
+
+    return searchQuery;
+  }
+
+  private createSearchQuerybyThree(searchValue: string, searchField: string, searchValue2: string, searchField2: string,
+    searchValue3: string, searchField3: string, isAnd: boolean) {
+    const tParamObj1 = new TSearchParam();
+
+    tParamObj1.field = searchField;
+    tParamObj1.operator = 'LIKE';
+    tParamObj1.value = searchValue;
+
+    const tParamObj2 = new TSearchParam();
+    tParamObj2.field = searchField2;
+    tParamObj2.operator = 'LIKE';
+    tParamObj2.value = searchValue2;
+
+    const tParamObj3 = new TSearchParam();
+    tParamObj3.field = searchField3;
+    tParamObj3.operator = 'LIKE';
+    tParamObj3.value = searchValue3;
+
+    const subGroup = new TSearchSubGroup();
+    const parmArray = new Array<TSearchParam>();
+    parmArray.push(tParamObj1);
+    parmArray.push(tParamObj2);
+    parmArray.push(tParamObj3);
+    subGroup.group = parmArray;
+    if (isAnd) {
+      subGroup.criteria1 = ANDOREnum.AND;
+    } else {
+      subGroup.criteria1 = ANDOREnum.OR;
+    }
+
+    const searchGroup = new TSearchGroup();
+    const subGroupArray = new Array<TSearchSubGroup>();
+    subGroupArray.push(subGroup);
+    searchGroup.criteria1 = ANDOREnum.AND;
+    searchGroup.group = subGroupArray;
+    const searchQuery = new SearchQuery();
+    searchQuery.group = searchGroup;
+
+    return searchQuery;
+  }
+
+  private createSearchQuerybytwo(searchValue: string, searchField: string, searchValue2: string, searchField2: string, isAnd: boolean) {
+    const tParamObj1 = new TSearchParam();
+
+    tParamObj1.field = searchField;
+    tParamObj1.operator = 'EQ';
+    tParamObj1.value = searchValue;
+
+    const tParamObj2 = new TSearchParam();
+    tParamObj2.field = searchField2;
+    tParamObj2.operator = 'EQ';
+    tParamObj2.value = searchValue2;
+
+    const subGroup = new TSearchSubGroup();
+    const parmArray = new Array<TSearchParam>();
+    parmArray.push(tParamObj1);
+    parmArray.push(tParamObj2);
+    subGroup.group = parmArray;
+    if (isAnd) {
+      subGroup.criteria1 = ANDOREnum.AND;
+    } else {
+      subGroup.criteria1 = ANDOREnum.OR;
+    }
+
+    const searchGroup = new TSearchGroup();
+    const subGroupArray = new Array<TSearchSubGroup>();
+    subGroupArray.push(subGroup);
+    searchGroup.criteria1 = ANDOREnum.AND;
+    searchGroup.group = subGroupArray;
+    const searchQuery = new SearchQuery();
+    searchQuery.group = searchGroup;
+
+    return searchQuery;
+  }
+
+  public getChartTotalData(data: StatsResponse, rowLabel: Array<string>) {
+
+    let index = 0;
+    const weekArr = new Array<any>();
+    const insideTotalArray = new Array<any>();
+    for (const iterator of data.statResGraph) {
+      let insideArray = new Array<any>();
+
+      for (const tempStatData of iterator.statsResData) {
+
+        let value: number;
+        let key: string;
+        for ([key, value] of Object.entries(tempStatData.counter)) {
+          insideArray.push(rowLabel[index++]);
+          insideArray.push(value);
+          weekArr.push(insideArray);
+          insideArray = [];
+        }
+        index = 0;
+        let amountValue: TAmount;
+        for ([key, amountValue] of Object.entries(tempStatData.amounts)) {
+          weekArr[index++].push(amountValue.value);
+          insideTotalArray.push(weekArr);
+
+        }
+
+      }
+    }
+    return insideTotalArray[0];
+  }
+
+  public getChartWeekData(data: StatsResponse, rowLabel: Array<string>, isThisNumber: boolean) {
+    const index = 0;
+    const weekArr = new Array<any>();
+    for (const iterator of data.statResGraph) {
+
+      let insideArray = new Array<any>();
+      for (const tempStatData of iterator.statsResData) {
+
+        if (isThisNumber) {
+          let value: number;
+          let key: string;
+          for ([key, value] of Object.entries(tempStatData.counter)) {
+
+            // insideArray.push(rowLabel[index++]);
+            insideArray.push(value);
+            weekArr.push(insideArray);
+            insideArray = [];
+          }
+        } else {
+
+          let value: TAmount;
+          let key: string;
+          for ([key, value] of Object.entries(tempStatData.amounts)) {
+
+            insideArray.push(value.value);
+          }
+        }
+      }
+    }
+    return weekArr;
+  }
+
+
+  public getChartDataSource1(data: StatsResponse, rowLabel: Array<string>, isThisNumber: boolean) {
+    const chartDataSource = new ChartDataSource();
+    chartDataSource.input = new Array<Array<any>>();
+    let index = 0;
+    for (const iterator of data.statResGraph) {
+
+      let insideArray = new Array<any>();
+      insideArray.push(rowLabel[index]);
+      for (const tempStatData of iterator.statsResData) {
+
+        if (isThisNumber) {
+          let value: number;
+          let key: string;
+          for ([key, value] of Object.entries(tempStatData.counter)) {
+            insideArray.push(value);
+          }
+        } else {
+          let value: TAmount;
+          let key: string;
+          for ([key, value] of Object.entries(tempStatData.amounts)) {
+            insideArray.push(value.value);
+          }
+        }
+      }
+      chartDataSource.input.push(insideArray);
+      insideArray = [];
+      index++;
+    }
+    // console.log(chartDataSource.input);
+    return chartDataSource.input;
+  }
+
+  // Default Graph Chart
+  public getChartDataSourceStacked(data: StatsResponse, isThisNumber: boolean) {
+    for (const graph of data.statResGraph) {
+      if (graph.statsResArray != null) {
+        if (isThisNumber) {
+          return graph.statsResArray.counter;
+        } else {
+          return graph.statsResArray.amounts;
+        }
+      }
+    }
+  }
+  // Sum for Pie Chart Data
+  public getSummedChartData(data: Array<Array<any>>) {
+
+    const finalOutput = Array<Array<any>>();
+
+    const output = Array<any>();
+    const outLabel = Array<any>();
+    let isfirstElement = true;
+    data.forEach(element => {
+      if (isfirstElement) {
+        for (let i = 0; i < element.length; i++) {
+          if (i > 0) {
+            outLabel[i - 1] = element[i];
+          }
+        }
+        isfirstElement = false;
+      } else {
+        for (let i = 0; i < element.length; i++) {
+          if (i > 0) {
+            if (output[i - 1]) {
+              output[i - 1] = output[i - 1] + element[i];
+            } else {
+              output[i - 1] = element[i];
+            }
+          }
+        }
+      }
+    });
+
+    for (let i = 0; i < outLabel.length; i++) {
+      const tempOut = Array<any>();
+      tempOut[0] = outLabel[i];
+      tempOut[1] = output[i];
+      finalOutput.push(tempOut);
+    }
+    // console.log(finalOutput);
+    return finalOutput;
+  }
+
+
+  // working for all week and month and year
+  public getChartDataSource(data: StatsResponse, rowLabel: Array<string>, isThisNumber: boolean) {
+    const chartDataSource = new ChartDataSource();
+    chartDataSource.input = new Array<Array<any>>();
+    const index = 0;
+    for (const iterator of data.statResGraph) {// iteration for each graph
+      let insideArray = new Array<any>();
+      for (const tempStatData of iterator.statsResData) {// each stat res data
+        for (const row of rowLabel) {
+          insideArray.push(row);
+
+          if (isThisNumber) {
+            let value: number;
+            let key: string;
+            for ([key, value] of Object.entries(tempStatData.counter)) {
+              if (key == row) {
+                insideArray.push(value);
+              }
+            }
+          } else {
+            let value: TAmount;
+            let key: string;
+            for ([key, value] of Object.entries(tempStatData.amounts)) {
+              insideArray.push(value.value);
+            }
+          }
+          if (insideArray.length == 1) {
+            insideArray.push(0);
+          }
+          chartDataSource.input.push(insideArray);
+          insideArray = [];
+        }
+      }
+    }
+    return chartDataSource.input;
+  }
+
+  public getTableDataSource(data: StatsResponse, rowLabel: Array<string>, isThisNumber: boolean) {
+    const chartDataSource = new ChartDataSource();
+    chartDataSource.input = new Array<Array<any>>();
+    let index = 0;
+    for (const iterator of data.statResGraph) {
+
+      const insideArray = new Array<any>();
+      insideArray.push(rowLabel[index]);
+      for (const tempStatData of iterator.statsResData) {
+
+        if (isThisNumber) {
+          let value: number;
+          let key: string;
+          for ([key, value] of Object.entries(tempStatData.counter)) {
+
+            insideArray.push(value);
+          }
+        } else {
+          let value: TAmount;
+          let key: string;
+          for ([key, value] of Object.entries(tempStatData.amounts)) {
+            insideArray.push(value.value);
+          }
+        }
+      }
+      chartDataSource.input.push(insideArray);
+      index++;
+    }
+    return chartDataSource.input;
+  }
+
+  getChartDirectReportData(data: StatsResponse, rowLabel: any, isThisNumber: boolean) {
+    const chartDataSource = new ChartDataSource();
+    chartDataSource.input = new Array<Array<any>>();
+    let countValue = 0;
+    let index = 0;
+    const directReportArr = new Array<any>();
+    for (const iterator of data.statResGraph) {
+
+      let insideArray = new Array<any>();
+      // insideArray.push(rowLabel[index]);
+
+      for (const tempStatData of iterator.statsResData) {
+        if (isThisNumber) {
+          let value: number;
+          let key: string;
+          for ([key, value] of Object.entries(tempStatData.counter)) {
+            countValue = countValue + (+value);
+          }
+          insideArray.push(rowLabel[index++]);
+          insideArray.push(countValue);
+          directReportArr.push(insideArray);
+          insideArray = [];
+        } else {
+          let value: TAmount;
+          let key: string;
+          for ([key, value] of Object.entries(tempStatData.amounts)) {
+            // insideArray.push(value.value);
+          }
+        }
+      }
+      // chartDataSource.input.push(insideArray);
+      // index++;
+    }
+    return directReportArr;
+  }
+
+  // Chart JS Code
+  public getChartJSDataSourceStacked(data: StatsResponse, isThisNumber: boolean) {
+    // const chartDataSource = new ChartDataSource();
+    // chartDataSource.input = new Array<Array<any>>();
+    for (const graph of data.statResGraph) {
+      if (graph.statsChartJS != null) {
+        if (isThisNumber) {
+          return graph.statsChartJS.counters;
+        } else {
+          return graph.statsChartJS.amounts;
+        }
+      }
+    }
+  }
+  public getChartJSDataSourceLabels(data: StatsResponse, isThisNumber: boolean) {
+    // const chartDataSource = new ChartDataSource();
+    // chartDataSource.input = new Array<Array<any>>();
+    for (const graph of data.statResGraph) {
+      if (graph.statsChartJS != null) {
+        if (isThisNumber) {
+          return graph.statsChartJS.labels;
+        } else {
+          return graph.statsChartJS.labels;
+        }
+      }
+    }
+  }
+  public getSummedChartJSData(data: Array<any>) {
+    const finalOutput = Array<Array<any>>();
+    const output = Array<any>();
+    const outLabel = Array<any>();
+    data.forEach((element, ind) => {
+      outLabel[ind] = element.label;
+      element.data.forEach((innerElement, index) => {
+        if (index > 0) {
+          output[ind] += Number(innerElement);
+        } else {
+          output[ind] = Number(innerElement);
+        }
+      });
+
+    });
+    const tempOut = Array<any>();
+    tempOut[0] = outLabel;
+    tempOut[1] = output;
+    finalOutput.push(tempOut);
+    return finalOutput;
+  }
+
+  getPriv(id: number) {
+    const priv: string = localStorage.getItem('p');
+    if (priv.substr(id - 1, 1) === '1') {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  openSnackBar() {
+    this.snackBar.openFromComponent(SuccessBarComponent, {
+      duration: 3000,
+      panelClass: ['warning'],
+    });
+  }
+
+  openErrorDialog(errData: ErrorMessageModule) {
+    const dialogRef = this.dialog.open(ErrorDialogComponent, {
+      disableClose: true,
+      width: '650px',
+      height: '550px',
+      data: errData,
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+    });
+  }
+
+
+  setNotif(key: string, err: ErrorMessageModule) {
+    if (key && err) {
+      const temp = new NotifObj();
+      temp.errCode = err.errorID;
+      temp.errMessage = err.errorMessage;
+      temp.errStatus = key;
+      this.localNotifs.unshift(temp);
+    } else {
+      const temp = new NotifObj();
+      temp.errCode = '';
+      temp.errMessage = '';
+      temp.errStatus = key;
+      this.localNotifs.unshift(temp);
+    }
+    if (this.localNotifs.length > 4) {
+      this.localNotifs.pop();
+      localStorage.setItem('localNotifs', JSON.stringify(this.localNotifs));
+    } else {
+      localStorage.setItem('localNotifs', JSON.stringify(this.localNotifs));
+    }
+
+    localStorage.setItem('err', JSON.stringify(err));
+  }
+
+  public setMessage(msg: string) {
+    this.message.next(msg);
+  }
+  public getMessage(): Observable<string> {
+    return this.message.asObservable();
+  }
+
+
+
+}
+
+export class NotifObj {
+  errCode: string;
+  errMessage: string;
+  errStatus: string;
+}
